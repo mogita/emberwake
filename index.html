@@ -28,6 +28,7 @@
         <div id="kit"></div>
         <div class="bar xp"><div id="xpfill"></div></div>
         <div id="dash"><div id="dashfill"></div><span>DASH</span></div>
+        <div id="joystick" class="hidden"><div id="joyThumb"></div></div>
         <div id="bossbar" class="hidden"><div class="bname">MOONMOTH MATRIARCH</div><div class="bar boss"><div id="bossfill"></div></div></div>
         <div id="banner"></div>
       </div>
@@ -36,13 +37,15 @@
         <img id="logo" src="/sprites/logo.png" alt="Emberwake" />
         <div class="tag">Keep the flame alive until dawn.</div>
         <div class="press blink">PRESS ANY KEY</div>
-        <div class="how">
+        <div class="mode-buttons"><button id="modeCampaign" class="mode active">NIGHTFALL</button><button id="modeArcade" class="mode">ENDLESS NIGHT</button></div>
+        <div id="mobileHint" class="mobile-hint hidden">DRAG TO MOVE · TAP DASH</div>
+        <div class="how" id="pcHow">
           <div><kbd>WASD</kbd> move</div>
           <div><kbd>SPACE</kbd> dash</div>
           <div>your lantern fights on its own</div>
           <div>light the braziers, their fire burns the dark</div>
         </div>
-        <div id="best" class="best"></div>
+        <button id="highScores" class="best">HIGHSCORES</button>
       </div>
 
       <div id="levelup" class="screen hidden">
@@ -63,8 +66,12 @@
         <div id="stats"></div>
         <div id="endscore"></div>
         <div id="newbest" class="hidden">NEW BEST</div>
+        <input id="scoreName" maxlength="16" placeholder="ENTER NAME" autocomplete="nickname" />
+        <button id="saveScore">SAVE SCORE</button>
         <div class="press blink">PRESS <kbd>R</kbd> TO RISE AGAIN</div>
       </div>
+
+      <div id="scoresModal" class="screen hidden"><div class="lu-title">HIGHSCORES</div><div class="score-tabs"><button id="scoresCampaign" class="score-tab active">CAMPAIGN</button><button id="scoresArcade" class="score-tab">ARCADE</button></div><div id="scoreRows"></div><button id="closeScores">CLOSE</button></div>
 
       <div id="flash"></div>
     </div>

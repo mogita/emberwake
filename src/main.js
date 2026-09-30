@@ -20,9 +20,29 @@ const fx = document.getElementById('fx');
 const fctx = fx.getContext('2d');
 
 let state = 'title', best = 0, lastT = performance.now(), dashBuf = 0, luDelay = 0;
+let scoreSaved = false, finalScore = 0;
+let runMode = 'campaign';
+const mobile = matchMedia('(pointer: coarse), (max-width: 700px)').matches;
+const joy = { active: false, id: null, x: 0, z: 0, cx: 0, cy: 0 };
+if (mobile) {
+  document.body.classList.add('mobile');
+  document.getElementById('mobileHint').classList.remove('hidden');
+  document.getElementById('pcHow').innerHTML = '<div>DRAG ANYWHERE TO MOVE</div><div>TAP DASH TO ESCAPE</div><div>your lantern fights on its own</div>';
+}
+const modeButtons = [...document.querySelectorAll('.mode')];
+modeButtons.forEach((b) => b.onclick = (e) => { e.stopPropagation(); runMode = b.id === 'modeArcade' ? 'arcade' : 'campaign'; modeButtons.forEach((x) => x.classList.toggle('active', x === b)); });
 try { best = +localStorage.getItem('emberwake.best') || 0; } catch { /* storage blocked */ }
 UI.setBest(best);
 UI.show('title');
+let scoreTab = 'campaign';
+function readScores() { try { return JSON.parse(localStorage.getItem('emberwake.scores') || '[]'); } catch { return []; } }
+function refreshScores() { UI.showScores(readScores(), scoreTab); }
+function writeScore() { if (scoreSaved) return; scoreSaved = true; const rows = readScores(); rows.push({ name: UI.scoreName(), score: finalScore, level: game.bossLevel, mode: runMode }); rows.sort((a, b) => b.score - a.score); try { localStorage.setItem('emberwake.scores', JSON.stringify(rows.slice(0, 100))); } catch {} UI.hideScores(); UI.show("title"); setState("title"); }
+document.getElementById('highScores').onclick = (e) => { e.stopPropagation(); UI.showScores(readScores(), scoreTab); };
+document.getElementById('closeScores').onclick = () => UI.hideScores();
+document.getElementById('saveScore').onclick = () => writeScore();
+document.getElementById('scoresCampaign').onclick = () => { scoreTab = 'campaign'; refreshScores(); };
+document.getElementById('scoresArcade').onclick = () => { scoreTab = 'arcade'; refreshScores(); };
 
 const keys = new Set();
 addEventListener('keydown', (e) => {
@@ -35,7 +55,11 @@ addEventListener('keydown', (e) => {
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
 addEventListener('blur', () => { keys.clear(); if (state === 'play') setState('pause'); });
-document.getElementById('stage').addEventListener('pointerdown', () => onPress('Click'));
+const stage = document.getElementById('stage');
+stage.addEventListener('pointerdown', (e) => { if (e.target.closest('button, input')) return; if (mobile && state === 'play' && e.target === stage) { joy.active = true; joy.id = e.pointerId; joy.cx = e.clientX; joy.cy = e.clientY; stage.setPointerCapture(e.pointerId); } else onPress('Click'); });
+stage.addEventListener('pointermove', (e) => { if (!joy.active || e.pointerId !== joy.id) return; joy.x = Math.max(-1, Math.min(1, (e.clientX - joy.cx) / 65)); joy.z = Math.max(-1, Math.min(1, (e.clientY - joy.cy) / 65)); });
+stage.addEventListener('pointerup', (e) => { if (e.pointerId === joy.id) { joy.active = false; joy.x = joy.z = 0; } });
+document.getElementById('dash').addEventListener('pointerdown', (e) => { e.stopPropagation(); dashBuf = 0.2; });
 
 function onPress(code) {
   if (state === 'title') begin();
@@ -47,11 +71,13 @@ function onPress(code) {
 
 function begin() {
   A.initAudio();
+  game.runMode = runMode === 'arcade' ? 'endless' : 'story';
   game.start();
+  scoreSaved = false;
   A.setMusic(1);
   A.ui();
   setState('play');
-  UI.banner('NIGHTFALL', 'survive until dawn · light the braziers');
+  UI.banner(runMode === 'arcade' ? 'ENDLESS NIGHT' : 'NIGHTFALL', runMode === 'arcade' ? 'defeat each boss to deepen the night' : 'survive until dawn · light the braziers');
 }
 
 function setState(s) {
@@ -61,8 +87,8 @@ function setState(s) {
 
 function input() {
   const k = (...c) => c.some((x) => keys.has(x));
-  let x = (k('KeyD', 'ArrowRight') ? 1 : 0) - (k('KeyA', 'ArrowLeft') ? 1 : 0);
-  let z = (k('KeyS', 'ArrowDown') ? 1 : 0) - (k('KeyW', 'ArrowUp') ? 1 : 0);
+  let x = mobile && joy.active ? joy.x : (k('KeyD', 'ArrowRight') ? 1 : 0) - (k('KeyA', 'ArrowLeft') ? 1 : 0);
+  let z = mobile && joy.active ? joy.z : (k('KeyS', 'ArrowDown') ? 1 : 0) - (k('KeyW', 'ArrowUp') ? 1 : 0);
   let dash = dashBuf > 0;
   const pad = navigator.getGamepads?.()[0];
   if (pad) {
@@ -88,9 +114,11 @@ function openLevelUp() {
 function finish(win) {
   const bonus = win ? 3000 + Math.round(game.p.hp) * 20 : 0;
   const final = game.score + bonus;
+  finalScore = final;
   const isBest = final > best;
   if (isBest) { best = final; try { localStorage.setItem('emberwake.best', String(best)); } catch { /* storage blocked */ } }
   UI.endScreen(win, game, final, best, isBest);
+  UI.askScoreName();
   UI.setBest(best);
   game.endT = 0;
   setState('end');

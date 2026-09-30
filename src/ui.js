@@ -22,10 +22,10 @@ export function hud(g) {
   set('hptext', 'text', `${Math.ceil(p.hp)} / ${p.maxHp}`);
   set('lvl', 'text', String(g.level));
   set('xpfill', 'width', `${Math.min(1, g.xp / g.need) * 100}%`);
-  set('nightfill', 'width', `${(g.t / NIGHT) * 100}%`);
+  set('nightfill', 'width', g.runMode === 'endless' ? '100%' : `${(g.t / NIGHT) * 100}%`);
   set('bossmark', 'left', `${(BOSS_AT / NIGHT) * 100}%`);
   const left = Math.max(0, Math.ceil(NIGHT - g.t));
-  set('clock', 'text', g.won ? 'DAWN' : `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} until dawn`);
+  set('clock', 'text', g.runMode === 'endless' ? 'ENDLESS NIGHT' : g.won ? 'DAWN' : `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} until dawn`);
   set('score', 'text', g.score.toLocaleString('en-US'));
   const m = g.mult();
   $('combo').classList.toggle('hidden', g.combo < 5);
@@ -106,7 +106,8 @@ export function endScreen(win, g, final, best, isBest) {
     ['Shadows banished', g.kills],
     ['Best chain', g.bestCombo],
     ['Braziers lit', g.lit],
-    ['Level', g.level],
+    ['Player level', g.level],
+    ['Boss level', g.bossLevel],
     ['Best', best.toLocaleString('en-US')],
   ];
   $('stats').innerHTML = rows.map(([k, v]) => `<div class="k">${k}</div><div class="v">${v}</div>`).join('');
@@ -115,5 +116,16 @@ export function endScreen(win, g, final, best, isBest) {
 }
 
 export function setBest(v) {
-  $('best').textContent = v ? `BEST ${v.toLocaleString('en-US')}` : '';
+  $('highScores').textContent = 'HIGHSCORES';
 }
+
+export function showScores(scores, mode = 'campaign') {
+  const filtered = scores.filter((s) => (s.mode || 'campaign') === mode);
+  $('scoresCampaign').classList.toggle('active', mode === 'campaign'); $('scoresArcade').classList.toggle('active', mode === 'arcade');
+  $('scoreRows').innerHTML = filtered.length ? filtered.map((s, i) => `<div class="score-row"><b>${i + 1}</b><span>${escapeHtml(s.name)}</span><strong>${Number(s.score).toLocaleString('en-US')}</strong><small>LV ${s.level}</small></div>`).join('') : '<div class="empty-scores">NO SCORES YET</div>';
+  $('scoresModal').classList.remove('hidden');
+}
+export function hideScores() { $('scoresModal').classList.add('hidden'); }
+export function askScoreName() { $('scoreName').value = ''; setTimeout(() => $('scoreName').focus(), 0); }
+export function scoreName() { return $('scoreName').value.trim().slice(0, 16) || 'EMBER'; }
+function escapeHtml(v) { return String(v).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }

@@ -131,5 +131,29 @@ kbd {
 #stats .v { font-family: "Silkscreen"; color: var(--text); }
 #endscore { font-family: "Silkscreen"; font-size: 4cqw; color: var(--gold); text-shadow: 0 0.3cqw 0 #6b2c00, 0 0 2cqw rgba(255, 170, 60, 0.6); }
 #newbest { font-family: "Silkscreen"; font-size: 1.6cqw; color: var(--ink); background: var(--moon); padding: 0.2cqw 1cqw; margin-top: 0.8cqw; animation: pop 0.4s ease-out; }
+#highScores, #saveScore, #closeScores { font:1.2cqw "Silkscreen"; color:var(--gold); background:rgba(12,14,34,.9); border:.2cqw solid var(--edge); padding:.6cqw 1cqw; cursor:pointer; }
+#scoreName { margin:1cqw 0 .6cqw; width:18cqw; font:1.2cqw "Silkscreen"; padding:.6cqw; text-align:center; text-transform:uppercase; background:#101329; color:var(--text); border:.2cqw solid var(--gold); }
+#scoresModal { background:rgba(4,4,12,.95); z-index:20; pointer-events:auto; }
+#scoreRows { width:min(58cqw,90vw); max-height:55vh; overflow:auto; margin:1.5cqw 0; }
+.score-tabs { display:flex; gap:1cqw; margin-top:1cqw; }.score-tab { font:1.1cqw "Silkscreen"; color:var(--dim); background:rgba(12,14,34,.9); border:.2cqw solid var(--edge); padding:.55cqw 1cqw; cursor:pointer; }.score-tab.active { color:var(--ink); background:var(--gold); border-color:var(--gold); }
+.score-row { display:grid; grid-template-columns:3cqw 1fr auto 6cqw; gap:1cqw; align-items:center; padding:.65cqw 1cqw; border-bottom:.1cqw solid var(--edge); font-size:1.5cqw; }
+.score-row strong { color:var(--gold); font-family:"Silkscreen"; }.score-row small { color:var(--dim); }.empty-scores { color:var(--dim); text-align:center; padding:3cqw; }
 
 #flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; mix-blend-mode: screen; }
+
+.mode-buttons { display:flex; gap:1cqw; margin-top:2cqw; pointer-events:auto; }
+.mode { font:1.05cqw "Silkscreen"; color:var(--dim); background:rgba(12,14,34,.85); border:.2cqw solid var(--edge); padding:.55cqw 1cqw; cursor:pointer; }
+.mode.active { color:var(--ink); background:var(--gold); border-color:var(--gold); }
+.mobile-hint { font-family:"Silkscreen"; font-size:1.15cqw; color:var(--moon); margin-top:1cqw; }
+#joystick { position:absolute; left:6%; bottom:9%; width:16cqw; height:16cqw; border:.35cqw solid rgba(159,227,255,.65); border-radius:50%; background:rgba(20,30,70,.35); pointer-events:none; }
+#joyThumb { position:absolute; left:50%; top:50%; width:6cqw; height:6cqw; transform:translate(-50%,-50%); border-radius:50%; background:rgba(159,227,255,.65); }
+.mobile #joystick { display:block !important; }
+.mobile #dash { width:13cqw; height:13cqw; right:5%; bottom:7%; border:.35cqw solid var(--moon); border-radius:50%; background:rgba(30,35,75,.9); box-shadow:0 0 2cqw rgba(159,227,255,.65); pointer-events:auto; }
+.mobile #dash span { font-size:2.3cqw; line-height:13cqw; }
+.mobile .bar.hp { width:30cqw; height:3.2cqw; }
+.mobile #hptext { line-height:3.2cqw; font-size:1.8cqw; }
+.mobile .bar.nightbar { width:35cqw; height:1.8cqw; }
+.mobile #clock { font-size:2.2cqw; top:3.8cqw; }
+.mobile #score { font-size:3.6cqw; }
+.mobile .bar.xp { bottom:2.5cqw; height:1.7cqw; left:4cqw; right:4cqw; }
+@media (max-width:700px) { .how { flex-direction:column; gap:1.2cqw; text-align:center; } .mode-buttons { gap:2cqw; } .mode { font-size:2.2cqw; padding:1.2cqw 2cqw; } .mobile-hint { font-size:2.1cqw; } }

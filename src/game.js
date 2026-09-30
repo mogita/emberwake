@@ -5,7 +5,7 @@ import * as A from './audio.js';
 import { HALF, buildWorld, colliderGrid } from './world.js';
 
 const TAU = Math.PI * 2;
-const HERO_FRAMES = 6;
+const HERO_FRAMES = 10;
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -15,7 +15,7 @@ const NIGHT_AMB = new THREE.Color(0.22, 0.26, 0.46), DAWN_AMB = new THREE.Color(
 const NIGHT_MOON = new THREE.Color(0.45, 0.6, 1.0), DAWN_MOON = new THREE.Color(1.0, 0.72, 0.4);
 const NIGHT_FOG = new THREE.Color(0.02, 0.025, 0.07), DAWN_FOG = new THREE.Color(0.42, 0.3, 0.32);
 
-export const SPRITES = ['hero', 'shade', 'moth', 'crawler', 'wraith', 'golem', 'boss_moth', 'gem_ember', 'gem_moon', 'heart_pickup', 'brazier', ...PROP_TYPES];
+export const SPRITES = ['hero', 'shade', 'moth', 'crawler', 'wraith', 'golem', 'boss_moth', 'grave_warden_boss', 'dread_seraph', 'level4_ashen_titan', 'level5_frost_hag', 'gem_ember', 'gem_moon', 'heart_pickup', 'brazier', ...PROP_TYPES];
 
 export class Game {
   constructor(r, spr) {
@@ -47,6 +47,10 @@ export class Game {
     this.plSil = new SpriteBatch(sc, spr.hero, { cap: 1, silhouette: true, frames: HERO_FRAMES, face: true });
     this.eb = {};
     for (const t of ENEMY_TYPES) this.eb[t] = new SpriteBatch(sc, spr[t === 'boss' ? 'boss_moth' : t], { cap: t === 'boss' ? 2 : 420, glow: D.ENEMIES[t].glow, rim: 1.1 });
+    this.eb.grave = new SpriteBatch(sc, spr.grave_warden_boss, { cap: 2, glow: 2.5, rim: 1.1 });
+    this.eb.seraph = new SpriteBatch(sc, spr.dread_seraph, { cap: 2, glow: 3.0, rim: 1.1 });
+    const bossAssets = ['level4_ashen_titan','level5_frost_hag','level6_void_leviathan','level7_briar_queen','level8_sun_eater','level9_storm_archon','level10_dawn_reaper'];
+    bossAssets.slice(0, 2).forEach((n, i) => { this.eb[`level${i + 4}`] = new SpriteBatch(sc, spr[n], { cap: 2, glow: 2.5 + i * 0.15, rim: 1.1 }); });
     this.gb = { ember: new SpriteBatch(sc, spr.gem_ember, { cap: 700, glow: 1.4 }), moon: new SpriteBatch(sc, spr.gem_moon, { cap: 200, glow: 1.4 }), heart: new SpriteBatch(sc, spr.heart_pickup, { cap: 20, glow: 3 }) };
     this.glow = new FxBatch(sc, { cap: 5000 });
     this.px = new FxBatch(sc, { cap: 3000, square: true });
@@ -55,6 +59,7 @@ export class Game {
     this.fireflies = Array.from({ length: 90 }, () => ({ x: rand(-HALF, HALF), z: rand(-HALF, HALF), y: rand(0.4, 2.5), ph: rand(0, TAU), sp: rand(0.3, 0.9) }));
     this.camX = 0; this.camZ = 6; this.camDist = 34;
     this.mode = 'title';
+    this.runMode = 'story';
     this.reset();
   }
 
@@ -64,7 +69,7 @@ export class Game {
     this.en = []; this.shots = []; this.eshots = []; this.gems = []; this.parts = []; this.texts = []; this.arcs = []; this.corpses = [];
     this.t = 0; this.spawnAcc = 0; this.surgeIdx = 0; this.boss = null; this.bossDone = false;
     this.cd = { bolt: 0.5, chain: 2, nova: 3 };
-    this.level = 1; this.xp = 0; this.need = D.xpNeed(1); this.pendingLevels = 0;
+    this.level = 1; this.bossLevel = 1; this.xp = 0; this.need = D.xpNeed(1); this.pendingLevels = 0;
     this.score = 0; this.kills = 0; this.combo = 0; this.comboT = 0; this.bestCombo = 0; this.streak = 0; this.streakT = 0; this.lit = 0;
     this.slow = 1; this.hitstop = 0; this.hurtFx = 0; this.dawn = 0; this.over = 0; this.won = 0; this.events = []; this.hinted = false;
     for (const b of this.world.braziers) { b.lit = 0; b.fuel = 0; b.prog = 0; }
@@ -77,14 +82,23 @@ export class Game {
     this.mode = 'play';
   }
 
+  advanceLevel() {
+    this.bossLevel++;
+    this.t = 0; this.spawnAcc = 0; this.surgeIdx = 0; this.boss = null; this.bossDone = false;
+    this.en.length = 0; this.eshots.length = 0; this.gems.length = 0;
+    this.p.hp = this.p.maxHp; this.p.dead = false; this.over = 0;
+    this.events.push({ banner: `BOSS LEVEL ${this.bossLevel}`, sub: `player level ${this.level} carries on` });
+    A.setMusic(1);
+  }
+
   // --- helpers -------------------------------------------------------------
 
   // Atlas (tools/cycle.py): 0-1 idle breathe, 2-5 run (stride, pass, stride, pass).
   heroFrame() {
     const p = this.p;
     if (p.dead) return 0;
-    if (Math.hypot(p.vx, p.vz) > 0.8) return 2 + (Math.floor(p.walk) % 4);
-    return Math.floor(shared.uTime.value * 1.6) % 2;
+    if (Math.hypot(p.vx, p.vz) > 0.8) return 4 + (Math.floor(p.walk) % 6);
+        return Math.floor(shared.uTime.value * 1.6) % 2;
   }
 
   stat(id) { return this.lv[id] || 0; }
@@ -129,8 +143,10 @@ export class Game {
 
   spawn(type, x, z) {
     const b = D.ENEMIES[type];
-    const scale = type === 'boss' ? 1 : 1 + (this.t / D.NIGHT) * 1.3;
-    const e = { type, x, z, vx: 0, vz: 0, kx: 0, kz: 0, hp: b.hp * scale, max: b.hp * scale, b, flash: 0, t: rand(0, 10), face: 1, orbT: 0, burn: 0, atk: rand(1.5, 3), slow: 0, dead: false, spawnT: 0 };
+    const scale = type === 'boss' ? 1 + (this.bossLevel - 1) * 0.34 : 1 + (this.t / D.NIGHT) * 1.3;
+    const bossStats = type === 'boss' ? { ...b, hp: b.hp * scale, speed: b.speed * (1 + (this.bossLevel - 1) * 0.045), dmg: b.dmg * (1 + (this.bossLevel - 1) * 0.12) } : b;
+    const renderType = type === 'boss' ? (this.bossLevel === 1 ? 'boss' : this.bossLevel === 2 ? 'grave' : this.bossLevel === 3 ? 'seraph' : `level${Math.min(5, this.bossLevel)}`) : type;
+    const e = { type, renderType, x, z, vx: 0, vz: 0, kx: 0, kz: 0, hp: bossStats.hp, max: bossStats.hp, b: bossStats, flash: 0, t: rand(0, 10), face: 1, orbT: 0, burn: 0, atk: rand(1.5, 3), slow: 0, dead: false, spawnT: 0 };
     if (type === 'boss') { e.ai = 'chase'; e.aiT = 3; e.seq = 0; }
     this.en.push(e);
     return e;
@@ -216,6 +232,7 @@ export class Game {
         this.events.push({ banner: 'THE MATRIARCH FALLS', sub: `+${Math.round(b.score * this.mult())}` });
         A.setMusic(3);
       }
+      this.advanceLevel();
       return;
     }
     if (e.type === 'golem') { drop('moon', 1, 6); drop('ember', 3, 1); this.hitstop = 0.06; this.r.shake.amt = Math.max(this.r.shake.amt, 0.5); }
@@ -255,7 +272,7 @@ export class Game {
     this.hurtFx = 0.75; this.hitstop = 0.05;
     this.r.shake.amt = Math.max(this.r.shake.amt, 0.8);
     this.combo = 0;
-    this.text(p.x, p.z, `-${dmg}`, '#ff5a4f', true, 2.4);
+    this.text(p.x, p.z, `-${Math.round(dmg)}`, '#ff5a4f', true, 2.4);
     this.emit(p.x, 1, p.z, 16, [3, 0.5, 0.4], { sp: 5, size: 0.25, life: 0.4 });
     A.hurt();
     if (p.hp <= 0) {
@@ -288,7 +305,7 @@ export class Game {
     if (this.won > 0) this.won += rdt;
     if (!this.p.dead && !this.won) {
       this.t += dt;
-      if (this.t >= D.NIGHT) this.dawnBreak();
+      if (this.runMode !== 'endless' && this.t >= D.NIGHT) this.dawnBreak();
       else this.director(dt);
     }
     const nightT = this.t / D.NIGHT;
@@ -767,7 +784,7 @@ export class Game {
       else if (e.type === 'golem') { y += Math.abs(Math.sin(e.t * 4)) * 0.1; rot = Math.sin(e.t * 4) * 0.04; }
       const pop = Math.min(1, e.spawnT * 3);
       const dis = e.dawnT !== undefined ? clamp(1 - e.dawnT * 3, 0, 1) : 0;
-      this.eb[e.type].add(e.x, y, e.z, sx * (0.6 + pop * 0.4), sy * pop, rot, e.flash, dis, 1);
+      this.eb[e.renderType || e.type].add(e.x, y, e.z, sx * (0.6 + pop * 0.4), sy * pop, rot, e.flash, dis, 1);
       this.shadows.shadow(e.x, e.z + 0.05, b.r * 1.3 * (e.type === 'boss' ? 1.8 : 1), e.b.hover > 0.5 ? 0.35 : 0.55);
       if (e.type === 'boss') light(e.x, 2.5, e.z, 0.6, 0.8, 2, 10);
       else if (e.type === 'wraith' || e.type === 'golem') light(e.x, 1.2, e.z, e.type === 'golem' ? 0.2 : 0.8, e.type === 'golem' ? 0.9 : 0.15, e.type === 'golem' ? 0.8 : 0.3, 3.5);
